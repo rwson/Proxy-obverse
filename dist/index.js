@@ -1,34 +1,24 @@
 "use strict";
 
-var ObjectObverse = require("./objectObverse");
-var ArrayObverse = require("./arrayObserve");
+var _common = require("./common");
+
+var _objectObverse = require("./objectObverse");
+
+var _arrayObserve = require("./arrayObserve");
+
+var _arrayObserve2 = _interopRequireDefault(_arrayObserve);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 function observe(o, fn) {
-	var type = _typeOf(o);
+	var type = (0, _common.typeOf)(o);
 	var instance = void 0;
 
 	switch (type) {
 
 		//	对象
 		case "Object":
-			var buildProxy = function buildProxy(prefix, o) {
-				return new Proxy(o, {
-					set: function set(target, property, value) {
-						fn(prefix + property, value);
-						target[property] = value;
-					},
-					get: function get(target, property) {
-						var out = target[property];
-						if (out instanceof Object) {
-							// console.log(prefix + property + ".", out);
-							return buildProxy(prefix + property + ".", out);
-						}
-						return out;
-					}
-				});
-			};
-
-			return buildProxy("", o);
+			return (0, _objectObverse.ObjectObverse)(o, fn, "");
 			break;
 
 		//	数组
@@ -40,10 +30,6 @@ function observe(o, fn) {
 			throw "the observe method only support Object or Array instance, but passed in " + type;
 			break;
 	}
-}
-
-function _typeOf(obj) {
-	return {}.toString.call(obj).slice(8, -1);
 }
 
 module.exports = observe;

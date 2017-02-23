@@ -1,51 +1,56 @@
 "use strict";
 
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+exports.ObjectObverse = ObjectObverse;
 
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+var _common = require("./common");
 
-var ObjectObverse = function () {
-    function ObjectObverse() {
-        _classCallCheck(this, ObjectObverse);
-    }
+var Common = _interopRequireWildcard(_common);
 
-    _createClass(ObjectObverse, [{
-        key: "consttrcutr",
-        value: function consttrcutr(obj, callback) {
-            if (arguments.length < 1) {
-                throw "you must pass in at least one parameter!";
-            }
-        }
-    }, {
-        key: "buildProxy",
-        value: function buildProxy(prefix, o) {
-            return new Proxy(o, {
-                set: function set(target, property, value) {
-                    var old = target[property];
-                    var type = void 0;
-                    if (typeof old === "undefined" && typeof value !== "undefined") {
-                        type = "add";
-                    } else if (typeof old !== "undefined" && typeof value === "undefined") {
-                        type = "remove";
-                    } else if (old !== value) {
+function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
+
+function ObjectObverse(obj, callback) {
+    var prefix = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : "";
+
+    function buildProxy(prefix, o) {
+        return new Proxy(o, {
+            set: function set(target, property, value) {
+                var old = target[property],
+                    oldType = Common.typeOf(old),
+                    newType = Common.typeOf(value);
+                var type = undefined,
+                    compareFn = void 0;
+
+                if (oldType === newType && oldType !== "Undefined") {
+                    compareFn = Common["compare" + oldType];
+                    if (Common.typeOf(compareFn) === "Undefined") {
+                        compareFn = Common.compareOther;
+                    }
+                    if (!compareFn(old, value)) {
                         type = "modify";
                     }
-                    target[property] = value;
-                    fn(type, prefix + property, value);
-                },
-                get: function get(target, property) {
-                    var out = target[property];
-                    if (out instanceof Object) {
-                        // console.log(prefix + property + ".", out);
-                        return this.buildProxy(prefix + property + ".", out);
-                    }
-                    return out;
+                } else if (oldType !== newType && oldType !== "Undefined" && newType !== "Undefined") {
+                    type = "modify";
+                } else if (oldType !== "Undefined" && newType === "Undefined") {
+                    type = "remove";
+                } else if (oldType === "Undefined" && newType !== "Undefined") {
+                    type = "add";
                 }
-            });
-        }
-    }]);
-
-    return ObjectObverse;
-}();
-
-module.exports = ObjectObverse;
+                target[property] = value;
+                if (type !== undefined) {
+                    callback(type, prefix + property, old, value);
+                }
+            },
+            get: function get(target, property) {
+                var out = target[property];
+                if (out instanceof Object) {
+                    return buildProxy(prefix + property + ".", out);
+                }
+                return out;
+            }
+        });
+    }
+    return buildProxy(prefix, obj);
+}
