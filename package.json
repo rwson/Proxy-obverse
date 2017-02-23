@@ -1,0 +1,16 @@
+{
+  "name": "proxy-obveser",
+  "version": "1.0.0",
+  "description": "obverse data change ",
+  "main": "test.js",
+  "scripts": {
+    "compile": "babel lib --out-dir dist",
+    "test": "node test.js"
+  },
+  "keywords": [
+    "obverse",
+    "data",
+    "change"
+  ],
+  "author": "rwson"
+}
