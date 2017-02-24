@@ -6,10 +6,6 @@ var _objectObverse = require("./objectObverse");
 
 var _arrayObserve = require("./arrayObserve");
 
-var _arrayObserve2 = _interopRequireDefault(_arrayObserve);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
 function observe(o, fn) {
 	var type = (0, _common.typeOf)(o);
 	var instance = void 0;
@@ -23,6 +19,7 @@ function observe(o, fn) {
 
 		//	数组
 		case "Array":
+			return (0, _arrayObserve.ArrayObverse)(o, fn);
 			break;
 
 		//	默认

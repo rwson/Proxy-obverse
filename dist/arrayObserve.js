@@ -3,55 +3,148 @@
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
-exports.default = undefined;
-
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+exports.ArrayObverse = ArrayObverse;
 
 var _common = require("./common");
 
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+var Common = _interopRequireWildcard(_common);
 
-var ArrayObverse = function () {
-    function ArrayObverse() {
-        _classCallCheck(this, ArrayObverse);
-    }
+function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
 
-    _createClass(ArrayObverse, [{
-        key: "consttrcutr",
-        value: function consttrcutr() {}
-    }, {
-        key: "init",
-        value: function init() {}
-    }, {
-        key: "buildProxy",
-        value: function buildProxy(prefix, o) {
-            return new Proxy(o, {
-                set: function set(target, property, value) {
-                    var old = target[property];
-                    var type = void 0;
-                    if (typeof old === "undefined" && typeof value !== "undefined") {
-                        type = "add";
-                    } else if (typeof old !== "undefined" && typeof value === "undefined") {
-                        type = "remove";
-                    } else if (old !== value) {
+var arrayPrototype = Array.prototype,
+    slice = arrayPrototype.slice,
+    pop = arrayPrototype.pop,
+    push = arrayPrototype.push,
+    unshift = arrayPrototype.unshift,
+    shift = arrayPrototype.shift,
+    splice = arrayPrototype.splice,
+    methods = {
+    ARRAY_POP: pop,
+    ARRAY_PUSH: push,
+    ARRAY_UNSHIFT: unshift,
+    ARRAY_ShIFT: shift,
+    ARRAY_SPLICE: splice
+};
+function ArrayObverse(arr, callback) {
+
+    //  对会直接对数组进行修改的方法进行代理
+    arr.pop = function () {
+        var argus = [].concat(Array.prototype.slice.call(arguments)),
+            old = Common.deepCopy(arr),
+            length = old.length,
+            changed = length >= 1 ? old[length - 1] : undefined;
+
+
+        methods.ARRAY_POP.apply(arr, argus);
+        callback("pop", changed, old, arr);
+    };
+
+    arr.push = function (items) {
+        var argus = [].concat(Array.prototype.slice.call(arguments)),
+            old = Common.deepCopy(arr);
+
+        methods.ARRAY_PUSH.apply(arr, argus);
+        callback("push", argus, old, arr);
+        return arr.length;
+    };
+
+    arr.unshift = function () {
+        var old = Common.deepCopy(arr),
+            length = old.length,
+            changed = length >= 1 ? old[length - 1] : undefined;
+
+
+        methods.ARRAY_UNSHIFT.call(arr);
+        callback("unshift", old, arr);
+    };
+
+    arr.shift = function () {
+        var old = Common.deepCopy(arr),
+            length = old.length,
+            changed = length >= 1 ? old[0] : undefined;
+
+
+        methods.ARRAY_ShIFT.call(arr);
+        callback("shift", changed, old, arr);
+    };
+
+    arr.splice = function () {
+        var old = Common.deepCopy(arr),
+            argus = [].concat(Array.prototype.slice.call(arguments)),
+            argsArray = slice.call(arguments),
+            length = argus.length;
+
+
+        var changed = {
+            removed: [],
+            changeIndexStart: -1,
+            changeIndexEnd: -1,
+            replace: []
+        };
+
+        switch (length) {
+            case 0:
+                break;
+
+            case 1:
+                break;
+
+            case 2:
+                changed.changeIndexStart = argus[0];
+                changed.changeIndexEnd = argus[1] + argus[0];
+                changed.removed = slice.apply(arr, argus);
+                break;
+
+            default:
+                changed.changeIndexStart = argus[0];
+                changed.changeIndexEnd = argus[1] + argus[0];
+                changed.removed = slice.apply(arr, [argus[0], argus[1]]);
+                changed.replace = argus.slice(2);
+                break;
+        }
+
+        methods.ARRAY_SPLICE.apply(arr, argus);
+
+        callback("splice", changed, old, arr);
+    };
+
+    function buildProxy(array, callback) {
+        return new Proxy(arr, {
+            set: function set(target, index, value) {
+                var old = target[index],
+                    oldType = Common.typeOf(old),
+                    newType = Common.typeOf(value);
+
+                if (oldType === newType && oldType !== "Undefined") {
+                    compareFn = Common["compare" + oldType];
+                    if (Common.typeOf(compareFn) === "Undefined") {
+                        compareFn = Common.compareOther;
+                    }
+                    if (!compareFn(old, value)) {
                         type = "modify";
                     }
-                    target[property] = value;
-                    fn(type, prefix + property, value);
-                },
-                get: function get(target, property) {
-                    var out = target[property];
-                    if (out instanceof Object) {
-                        // console.log(prefix + property + ".", out);
-                        return this.buildProxy(prefix + property + ".", out);
-                    }
-                    return out;
+                } else if (oldType !== newType && oldType !== "Undefined" && newType !== "Undefined") {
+                    type = "modify";
+                } else if (oldType !== "Undefined" && newType === "Undefined") {
+                    type = "remove";
+                } else if (oldType === "Undefined" && newType !== "Undefined") {
+                    type = "add";
                 }
-            });
-        }
-    }]);
 
-    return ArrayObverse;
-}();
+                target[index] = value;
+                if (type !== undefined) {
+                    callback(type, [value], old, value);
+                }
+            },
+            get: function get(target, index) {
+                var out = target[index];
+                if (Array.isArray(out)) {
+                    return buildProxy(out, callback);
+                }
+                return out;
+            }
+        });
+    }
 
-exports.default = ArrayObverse;
+    return buildProxy(arr, callback);
+}
