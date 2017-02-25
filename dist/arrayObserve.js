@@ -25,6 +25,12 @@ var arrayPrototype = Array.prototype,
     ARRAY_ShIFT: shift,
     ARRAY_SPLICE: splice
 };
+
+
+function _getArrayItem(arr, index) {
+    return arr[index];
+}
+
 function ArrayObverse(arr, callback) {
 
     //  对会直接对数组进行修改的方法进行代理
@@ -36,6 +42,7 @@ function ArrayObverse(arr, callback) {
 
 
         methods.ARRAY_POP.apply(arr, argus);
+
         callback("pop", changed, old, arr);
     };
 
@@ -55,7 +62,7 @@ function ArrayObverse(arr, callback) {
 
 
         methods.ARRAY_UNSHIFT.call(arr);
-        callback("unshift", old, arr);
+        callback("unshift", changed, old, arr);
     };
 
     arr.shift = function () {
@@ -71,7 +78,6 @@ function ArrayObverse(arr, callback) {
     arr.splice = function () {
         var old = Common.deepCopy(arr),
             argus = [].concat(Array.prototype.slice.call(arguments)),
-            argsArray = slice.call(arguments),
             length = argus.length;
 
 
@@ -84,9 +90,16 @@ function ArrayObverse(arr, callback) {
 
         switch (length) {
             case 0:
+                changed.changeIndexStart = argus[0];
+                changed.changeIndexEnd = arr.length - 1;
+                changed.removed = [];
+                changed.replace = [];
                 break;
 
             case 1:
+                changed.changeIndexStart = argus[0];
+                changed.changeIndexEnd = arr.length - 1;
+                changed.removed = slice.apply(arr, argus);
                 break;
 
             case 2:
@@ -104,7 +117,6 @@ function ArrayObverse(arr, callback) {
         }
 
         methods.ARRAY_SPLICE.apply(arr, argus);
-
         callback("splice", changed, old, arr);
     };
 
@@ -114,6 +126,9 @@ function ArrayObverse(arr, callback) {
                 var old = target[index],
                     oldType = Common.typeOf(old),
                     newType = Common.typeOf(value);
+
+                var type = undefined,
+                    compareFn = void 0;
 
                 if (oldType === newType && oldType !== "Undefined") {
                     compareFn = Common["compare" + oldType];
