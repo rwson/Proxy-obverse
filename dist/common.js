@@ -13,6 +13,7 @@ exports.compareDate = compareDate;
 exports.compareBoolean = compareBoolean;
 exports.compareRegexp = compareRegexp;
 exports.compareOther = compareOther;
+exports.hasArrayInArray = hasArrayInArray;
 function typeOf(obj) {
 	return {}.toString.call(obj).slice(8, -1);
 }
@@ -77,14 +78,22 @@ function compareOther(data1, data2) {
 	return data1 === data2;
 }
 
-function hasObjectInArray(array) {
-	var res = true;
+function hasArrayInArray(array) {
 	for (var i = 0, length = array.length; i < length; i++) {
-		if (typeOf(array[i]) === "Object") {
-			return false;
+		if (typeOf(array[i]) === "Array") {
+			return true;
 		}
 	}
-	return res;
+	return false;
+}
+
+function hasObjectInArray(array) {
+	for (var i = 0, length = array.length; i < length; i++) {
+		if (typeOf(array[i]) === "Object") {
+			return true;
+		}
+	}
+	return false;
 }
 
 function deepCompareArray(arr1, arr2) {

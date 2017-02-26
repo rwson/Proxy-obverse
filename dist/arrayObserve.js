@@ -25,102 +25,123 @@ var arrayPrototype = Array.prototype,
     ARRAY_ShIFT: shift,
     ARRAY_SPLICE: splice
 };
-
-
-function _getArrayItem(arr, index) {
-    return arr[index];
-}
-
 function ArrayObverse(arr, callback) {
 
     //  对会直接对数组进行修改的方法进行代理
-    arr.pop = function () {
-        var argus = [].concat(Array.prototype.slice.call(arguments)),
-            old = Common.deepCopy(arr),
-            length = old.length,
-            changed = length >= 1 ? old[length - 1] : undefined;
+    function proxyArrayProp(arr) {
+        arr.pop = function () {
+            var argus = [].concat(Array.prototype.slice.call(arguments)),
+                old = Common.deepCopy(arr),
+                length = old.length,
+                changed = length >= 1 ? old[length - 1] : undefined;
 
 
-        methods.ARRAY_POP.apply(arr, argus);
-
-        callback("pop", changed, old, arr);
-    };
-
-    arr.push = function (items) {
-        var argus = [].concat(Array.prototype.slice.call(arguments)),
-            old = Common.deepCopy(arr);
-
-        methods.ARRAY_PUSH.apply(arr, argus);
-        callback("push", argus, old, arr);
-        return arr.length;
-    };
-
-    arr.unshift = function () {
-        var old = Common.deepCopy(arr),
-            length = old.length,
-            changed = length >= 1 ? old[length - 1] : undefined;
-
-
-        methods.ARRAY_UNSHIFT.call(arr);
-        callback("unshift", changed, old, arr);
-    };
-
-    arr.shift = function () {
-        var old = Common.deepCopy(arr),
-            length = old.length,
-            changed = length >= 1 ? old[0] : undefined;
-
-
-        methods.ARRAY_ShIFT.call(arr);
-        callback("shift", changed, old, arr);
-    };
-
-    arr.splice = function () {
-        var old = Common.deepCopy(arr),
-            argus = [].concat(Array.prototype.slice.call(arguments)),
-            length = argus.length;
-
-
-        var changed = {
-            removed: [],
-            changeIndexStart: -1,
-            changeIndexEnd: -1,
-            replace: []
+            methods.ARRAY_POP.apply(arr, argus);
+            callback("pop", changed, old, arr);
+            return changed;
         };
 
-        switch (length) {
-            case 0:
-                changed.changeIndexStart = argus[0];
-                changed.changeIndexEnd = arr.length - 1;
-                changed.removed = [];
-                changed.replace = [];
-                break;
+        arr.push = function (items) {
+            var argus = [].concat(Array.prototype.slice.call(arguments)),
+                old = Common.deepCopy(arr);
 
-            case 1:
-                changed.changeIndexStart = argus[0];
-                changed.changeIndexEnd = arr.length - 1;
-                changed.removed = slice.apply(arr, argus);
-                break;
+            methods.ARRAY_PUSH.apply(arr, argus);
+            callback("push", argus, old, arr);
+            return arr.length;
+        };
 
-            case 2:
-                changed.changeIndexStart = argus[0];
-                changed.changeIndexEnd = argus[1] + argus[0];
-                changed.removed = slice.apply(arr, argus);
-                break;
+        arr.unshift = function () {
+            var argus = [].concat(Array.prototype.slice.call(arguments)),
+                old = Common.deepCopy(arr),
+                length = old.length;
 
-            default:
-                changed.changeIndexStart = argus[0];
-                changed.changeIndexEnd = argus[1] + argus[0];
-                changed.removed = slice.apply(arr, [argus[0], argus[1]]);
-                changed.replace = argus.slice(2);
-                break;
+
+            methods.ARRAY_UNSHIFT.apply(arr, argus);
+            callback("unshift", argus, old, arr);
+            return arr.length;
+        };
+
+        arr.shift = function () {
+            var old = Common.deepCopy(arr),
+                length = old.length,
+                changed = length >= 1 ? old[0] : undefined;
+
+
+            methods.ARRAY_ShIFT.call(arr);
+            callback("shift", changed, old, arr);
+            return changed;
+        };
+
+        arr.splice = function () {
+            var old = Common.deepCopy(arr),
+                argus = [].concat(Array.prototype.slice.call(arguments)),
+                length = argus.length;
+
+
+            var changed = {
+                removed: [],
+                changeIndexStart: -1,
+                changeIndexEnd: -1,
+                replace: []
+            };
+
+            switch (length) {
+                case 0:
+                    changed.changeIndexStart = 0;
+                    changed.changeIndexEnd = arr.length - 1;
+                    changed.removed = [];
+                    changed.replace = [];
+                    break;
+
+                case 1:
+                    changed.changeIndexStart = argus[0];
+                    changed.changeIndexEnd = arr.length - 1;
+                    changed.removed = slice.apply(arr, argus);
+                    break;
+
+                case 2:
+                    changed.changeIndexStart = argus[0];
+                    changed.changeIndexEnd = argus[1] + argus[0];
+                    changed.removed = slice.apply(arr, [argus[0], argus[0] + argus[1]]);
+                    break;
+
+                default:
+                    changed.changeIndexStart = argus[0];
+                    changed.changeIndexEnd = argus[1] + argus[0];
+                    changed.removed = slice.apply(arr, [argus[0], argus[0] + argus[1]]);
+                    changed.replace = slice.call(argus, argus[2]);
+                    break;
+            }
+
+            methods.ARRAY_SPLICE.apply(arr, argus);
+            callback("splice", changed, old, arr);
+            return arr.length;
+        };
+
+        return arr;
+    }
+
+    function loopArray(arr, callback) {
+        for (var i = 0, length = arr.length; i < length; i++) {
+            var cur = arr[i],
+                type = Common.typeOf(cur);
+            if (type === "Array") {
+                arr[i] = callback(cur);
+                if (Common.hasArrayInArray(cur)) {
+                    loopArray(cur, callback);
+                }
+            } else {
+                arr[i] = cur;
+            }
         }
-
-        methods.ARRAY_SPLICE.apply(arr, argus);
-        callback("splice", changed, old, arr);
-    };
+    }
 
     function buildProxy(array, callback) {
+        array = proxyArrayProp(array);
+        loopArray(array, function (item) {
+            return proxyArrayProp(item);
+        });
+
         return new Proxy(arr, {
             set: function set(target, index, value) {
                 var old = target[index],
@@ -153,9 +174,6 @@ function ArrayObverse(arr, callback) {
             },
             get: function get(target, index) {
                 var out = target[index];
-                if (Array.isArray(out)) {
-                    return buildProxy(out, callback);
-                }
                 return out;
             }
         });
