@@ -9,6 +9,8 @@ var _common = require("./common");
 
 var Common = _interopRequireWildcard(_common);
 
+var _objectObverse = require("./objectObverse");
+
 function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
 
 var arrayPrototype = Array.prototype,
@@ -142,41 +144,48 @@ function ArrayObverse(arr, callback) {
             return proxyArrayProp(item);
         });
 
-        return new Proxy(arr, {
-            set: function set(target, index, value) {
-                var old = target[index],
-                    oldType = Common.typeOf(old),
-                    newType = Common.typeOf(value);
+        function _proxyGetSet(arr, callback) {
+            return new Proxy(arr, {
+                set: function set(target, index, value) {
+                    var old = target[index],
+                        oldType = Common.typeOf(old),
+                        newType = Common.typeOf(value);
 
-                var type = undefined,
-                    compareFn = void 0;
+                    var type = undefined,
+                        compareFn = void 0;
 
-                if (oldType === newType && oldType !== "Undefined") {
-                    compareFn = Common["compare" + oldType];
-                    if (Common.typeOf(compareFn) === "Undefined") {
-                        compareFn = Common.compareOther;
-                    }
-                    if (!compareFn(old, value)) {
+                    if (oldType === newType && oldType !== "Undefined") {
+                        compareFn = Common["compare" + oldType];
+                        if (Common.typeOf(compareFn) === "Undefined") {
+                            compareFn = Common.compareOther;
+                        }
+                        if (!compareFn(old, value)) {
+                            type = "modify";
+                        }
+                    } else if (oldType !== newType && oldType !== "Undefined" && newType !== "Undefined") {
                         type = "modify";
+                    } else if (oldType !== "Undefined" && newType === "Undefined") {
+                        type = "remove";
+                    } else if (oldType === "Undefined" && newType !== "Undefined") {
+                        type = "add";
                     }
-                } else if (oldType !== newType && oldType !== "Undefined" && newType !== "Undefined") {
-                    type = "modify";
-                } else if (oldType !== "Undefined" && newType === "Undefined") {
-                    type = "remove";
-                } else if (oldType === "Undefined" && newType !== "Undefined") {
-                    type = "add";
-                }
 
-                target[index] = value;
-                if (type !== undefined) {
-                    callback(type, [value], old, value);
+                    target[index] = value;
+                    if (type !== undefined) {
+                        callback(type, [value], old, value);
+                    }
+                },
+                get: function get(target, index) {
+                    var out = target[index];
+                    if (out instanceof Array) {
+                        return _proxyGetSet(out, callback);
+                    }
+                    return out;
                 }
-            },
-            get: function get(target, index) {
-                var out = target[index];
-                return out;
-            }
-        });
+            });
+        }
+
+        return _proxyGetSet(arr, callback);
     }
 
     return buildProxy(arr, callback);

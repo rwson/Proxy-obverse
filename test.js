@@ -145,7 +145,6 @@ describe("测试将Object属性置空", function() {
     p2.model.name = undefined;
 });
 
-
 describe("pop方法测试", function() {
     let arr1 = [
             1,
@@ -407,4 +406,19 @@ describe("修改/新增/删除值测试", function() {
         });
 
     arrOb3[2] = undefined;
+
+    let arr4 = [
+        1,
+        2,
+        [3, 4, 5]
+    ],
+    arrOb4 = observe(arr4, function(type, changed, oldV, newV) {
+        it("多级修改值测试", function(done) {
+            expect(type).to.equal("modify");
+            expect(oldV).to.equal(4);
+            expect(newV).to.equal("3");
+            done();
+        });
+    });
+    arrOb4[2][1] = "3";
 });
