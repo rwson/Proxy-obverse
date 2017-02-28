@@ -1,5 +1,7 @@
-const observe = require("./dist");
+const observe = require("./index");
 var expect = require("chai").expect;
+
+console.log(observe);
 
 describe("测试Object修改属性", function() {
     let obj1 = {

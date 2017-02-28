@@ -5,7 +5,7 @@
   "main": "test.js",
   "scripts": {
     "compile": "babel lib --out-dir dist",
-    "test": "npm run compile && mocha test.js"
+    "test": "mocha test.js"
   },
   "keywords": [
     "obverse",
