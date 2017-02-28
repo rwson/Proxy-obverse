@@ -14,11 +14,11 @@
     
     npm test
 
-- 测试
+- 引用
 
     git clone https://github.com/rwson/Proxy-obverse
     
-将代码拷贝到项目目录下,通过commonJS的方式引用即可
+    将代码拷贝到项目目录下,通过commonJS的方式引用即可
 
 
 ### API
