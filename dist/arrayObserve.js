@@ -177,8 +177,16 @@ function ArrayObverse(arr, callback) {
                 },
                 get: function get(target, index) {
                     var out = target[index];
-                    if (out instanceof Array) {
-                        return _proxyGetSet(out, callback);
+                    var type = Common.typeOf(out);
+                    switch (type) {
+                        case "Object":
+                            out = (0, _objectObverse.ObjectObverse)(out, callback);
+                            break;
+                        case "Array":
+                            out = _proxyGetSet(out, callback);
+                            break;
+                        default:
+                            break;
                     }
                     return out;
                 }

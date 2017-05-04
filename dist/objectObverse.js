@@ -47,8 +47,16 @@ function ObjectObverse(obj, callback) {
             },
             get: function get(target, property) {
                 var out = target[property];
-                if (out instanceof Object) {
-                    return buildProxy(prefix + property + ".", out);
+                var type = Common.typeOf(out);
+                switch (type) {
+                    case "Object":
+                        out = buildProxy(prefix + property + ".", out);
+                        break;
+                    case "Array":
+                        out = (0, _arrayObserve.ArrayObverse)(out, callback);
+                        break;
+                    default:
+                        break;
                 }
                 return out;
             }
